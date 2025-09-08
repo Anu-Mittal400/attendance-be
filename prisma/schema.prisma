@@ -1,0 +1,109 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public"]
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String       @id @default(uuid())
+  name         String
+  email        String       @unique
+  active       Boolean?     @default(true)
+  role         Role         @default(Employee)
+  password     String?
+  refreshToken String?
+  blocked      Boolean?
+  blockReason  String?
+  provider     ProviderType
+  facebookId   String?      @unique
+  linkedinId   String?      @unique
+  image        String?
+
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @default(now())
+
+  attendances  Attendance[]
+
+  @@schema("public")
+}
+
+model Attendance {
+  id         String         @id @default(uuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id])
+
+  date       DateTime
+  status     AttendanceStatus @default(PENDING)
+
+  punches    Punch[]        // raw punch logs for the day
+
+  totalHours Float?         // optional, can be computed from punches
+
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @default(now())
+
+  @@unique([userId, date])
+  @@schema("public")
+}
+
+model Punch {
+  id           String       @id @default(uuid())
+  attendanceId String
+  attendance   Attendance  @relation(fields: [attendanceId], references: [id])
+
+  type        PunchType
+  timestamp   DateTime     @default(now())
+  photoUrl    String?
+  location    String?
+
+  createdAt   DateTime     @default(now())
+
+  @@schema("public")
+}
+
+model Holiday {
+  id        String   @id @default(uuid())
+  name      String
+  date      DateTime
+  createdAt DateTime @default(now())
+
+  @@schema("public")
+}
+
+enum Role {
+  Employee
+  ADMIN
+
+  @@schema("public")
+}
+
+enum ProviderType {
+  GOOGLE
+  MANUAL
+  FACEBOOK
+  APPLE
+  LINKEDIN
+
+  @@schema("public")
+}
+
+enum AttendanceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@schema("public")
+}
+
+enum PunchType {
+  CLOCK_IN
+  BREAK_START
+  BREAK_END
+  CLOCK_OUT
+
+  @@schema("public")
+}
